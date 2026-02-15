@@ -1,9 +1,9 @@
 from fastapi import APIRouter
-from models import QueryRequest, ExplanationResponse
-from services.intent import classify_intent
-from services.generator import generate_explanation
-from services.compliance import compliance_check
-from utils.logger import get_logger
+from backend.models import QueryRequest, ExplanationResponse
+from backend.services.intent import classify_intent
+from backend.services.generator import generate_explanation
+from backend.services.compliance import compliance_check
+from backend.utils.logger import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)
