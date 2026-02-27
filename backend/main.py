@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from config import settings
-from routers.explain import router as explain_router
+from backend.config import settings
+from backend.routers.explain import router as explain_router
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
