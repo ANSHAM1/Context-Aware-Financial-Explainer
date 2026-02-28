@@ -1,7 +1,8 @@
 import streamlit as st
 import requests
+import dotenv as de
 
-API_URL = "http://127.0.0.1:8000/api/v1/explain"
+API_URL = de.API_URL
 
 st.set_page_config(page_title="Financial Explainer", layout="wide")
 
