@@ -1,8 +1,14 @@
 import streamlit as st
-import requests
-import dotenv as de
+import os
+from dotenv import load_dotenv
+import google.generativeai as genai
 
-API_URL = de.API_URL
+# Load environment variables
+load_dotenv()
+
+# Configure Gemini
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("models/gemini-flash-latest")
 
 st.set_page_config(page_title="Financial Explainer", layout="wide")
 
@@ -21,41 +27,96 @@ query = st.text_area("Ask a financial question:")
 
 if st.button("Explain"):
 
-    payload = {
-        "user_id": "user_1",
-        "query": query,
-        "context": {
-            "income": income,
-            "savings": savings,
-            "loans": loans,
-            "goals": goals
-        }
-    }
+    if not query.strip():
+        st.warning("Please enter a question.")
+        st.stop()
 
-    response = requests.post(API_URL, json=payload)
+    prompt = f"""
+    You are an educational financial explainer.
+    Do NOT provide financial advice.
+    Only provide conceptual explanation.
 
-    if response.status_code == 200:
-        data = response.json()
+    User Context:
+    - Monthly Income: {income}
+    - Savings: {savings}
+    - Loans: {loans}
+    - Goals: {goals}
 
-        if data["advisory_blocked"]:
-            st.error("Advisory request detected. Educational explanation only.")
+    User Question:
+    {query}
 
-        st.markdown("### Explanation")
-        st.write(data["explanation"])
+    Output strictly in this format:
 
-        if data["assumptions"]:
-            st.markdown("### Assumptions")
-            for item in data["assumptions"]:
-                st.write(f"- {item}")
+    Explanation:
+    <detailed explanation>
 
-        if data["risks"]:
-            st.markdown("### Risks")
-            for item in data["risks"]:
-                st.write(f"- {item}")
+    Assumptions:
+    - assumption 1
+    - assumption 2
 
-        if data["sources"]:
-            st.markdown("### Sources")
-            for item in data["sources"]:
-                st.write(f"- {item}")
-    else:
-        st.error("Backend error.")
+    Risks:
+    - risk 1
+    - risk 2
+
+    Sources:
+    - general financial knowledge
+    """
+
+    with st.spinner("Generating explanation..."):
+        response = model.generate_content(prompt)
+        output = response.text
+
+    # Simple structured parsing
+    sections = output.split("Assumptions:")
+    
+    explanation_part = sections[0].replace("Explanation:", "").strip()
+
+    assumptions = []
+    risks = []
+    sources = []
+
+    if len(sections) > 1:
+        rest = sections[1]
+        parts = rest.split("Risks:")
+        assumptions_text = parts[0]
+
+        assumptions = [
+            line.strip("- ").strip()
+            for line in assumptions_text.split("\n")
+            if line.strip().startswith("-")
+        ]
+
+        if len(parts) > 1:
+            risks_split = parts[1].split("Sources:")
+            risks_text = risks_split[0]
+
+            risks = [
+                line.strip("- ").strip()
+                for line in risks_text.split("\n")
+                if line.strip().startswith("-")
+            ]
+
+            if len(risks_split) > 1:
+                sources = [
+                    line.strip("- ").strip()
+                    for line in risks_split[1].split("\n")
+                    if line.strip().startswith("-")
+                ]
+
+    st.markdown("### Explanation")
+    st.write(explanation_part)
+
+    if assumptions:
+        st.markdown("### Assumptions")
+        for item in assumptions:
+            st.write(f"- {item}")
+
+    if risks:
+        st.markdown("### Risks")
+        for item in risks:
+            st.write(f"- {item}")
+
+    if sources:
+        st.markdown("### Sources")
+        for item in sources:
+            st.write(f"- {item}")
